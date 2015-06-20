@@ -10,3 +10,6 @@ grigio:babel
 mike:mocha
 autopublish
 insecure
+digilord:faker
+accounts-password
+meteorhacks:kadira
