@@ -8,3 +8,5 @@ meteor-platform
 ramda:ramda
 grigio:babel
 mike:mocha
+autopublish
+insecure

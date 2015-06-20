@@ -1,3 +1,3 @@
 Template.main.rendered = function() {
-
+  
 }
