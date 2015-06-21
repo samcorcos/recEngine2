@@ -82,7 +82,7 @@ recEngine = {
         // console.log(user, nodeKey);
 
         //TODO THE ERROR IS HERE...
-        
+
         let max = fn.maxFlow(user, nodeKey);
         console.log("max   --   "+ max);
         result.push({node:nodeKey, rating:max});
@@ -104,7 +104,7 @@ recEngine = {
 Meteor.startup(function() {
 
   if (Addresses.find().count() === 0) {
-    _.each(_.range(1000), function(el, i) {
+    _.each(_.range(100), function(el, i) {
       console.log("Adding address #" + i);
       let address = faker.address.country();
       let test1 = new RegExp('\\.', 'ig');

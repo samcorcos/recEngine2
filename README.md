@@ -7,3 +7,7 @@
 At some point, we need to make sure the data going in does not contain $ or .
 
 The algorithm needs to work for IDs... Not sure why it is not at the moment
+
+**IMPORTANT**
+
+When you re-seed the database, be sure to change the username query you're sending to the method!
