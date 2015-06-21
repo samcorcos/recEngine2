@@ -1,97 +1,61 @@
 recEngine = {
-  link(user, item) {    // Pass in ID for user and item. Or at least, some unique identifier...
-    let addLink = function() {
-      if (!RecEngine.findOne({ link: {user:user, item:item} })) { // Checks to make sure the association has not already been made.
+  link(user, item) {
+    let addLink = function(user, item) {
+
+      /* Checks to make sure the association has not already been made. */
+      if (!RecEngine.findOne({ link: {user, item} })) {
+        /* If the link does not already exist, create it */
         RecEngine.insert({ link: { user, item } }, function(err, res) {
-          if (!err) { updateFlow(); }
+          /* If there is an error, log it */
+          if (err) { console.error(err) ;};
+          /* Then, update the weights for flow */
+          return updateFlow(user, item);
         });
       } else {
         console.error("User-item pair already exists");
-      }
+        return updateFlow(user, item);
+      };
     };
-    let updateFlow = function() {
-      let userLinks = RecEngine.find({"link.user": user}).fetch(); // This returns an array of all the things the user has liked.
-      let items = R.pluck('item')(R.pluck('link')(userLinks)); // We now have an array of the item IDs.
-
-      // _.each(items, function(el, i) { // TODO this is going to be a disaster in the long run. We have to find a way to make this more efficient
-      //   // console.log(i + " " + el);
-      //   let selector1 = selector2 = {};
-      //   selector1['edge.'+item] = {$exists: true};
-      //   selector2['edge.'+el] = {$exists: true};
-      //
-      //   let found1 = RecEngine.findOne(selector1)
-      //   let found2 = RecEngine.findOne(selector2)
-      //
-      //   if ( found1 ) {
-      //     console.log("****Found 1");
-      //
-      //
-      //     // selector['edge.'+item+el] = {$exists: true};
-      //     // console.log(test);
-      //     // if ( RecEngine.findOne(selector) ) {
-      //     //   console.log("running");
-      //     // }
-      //   } else if ( found2 ) { // Otherwise, create a new one
-      //     console.log("Found2****");
-      //
-      //
-      //
-      //   } else {
-      //     let node = {};
-      //     node["edge"] = {};
-      //     node["edge"][item] = {};
-      //     node["edge"][item][el] = 1;
-      //
-      //     RecEngine.insert(node, function(err,res) {
-      //       if (err) { console.error(err); };
-      //     })
-      //
-      //   }
-      //
-      //
-      //   // RecEngine.upsert(selector, modifier, false, function(err,res) {
-      //   //   if (err) { console.error(err); };
-      //   // });
-      // })
+    let updateFlow = function(user, item) {
+      /* This returns an array of all the things the user has liked. */
+      let userLinks = RecEngine.find({"link.user": user}).fetch();
+      /* We now have an array of the item IDs. */
+      let items = R.pluck('item')(R.pluck('link')(userLinks));
 
       _.each(items, function(el, i) {
-        console.log(i + " " + el);
-        let selector = {};
-        selector["edge"] = {};
-        selector["edge"][el] = {};
+        console.log("Linking " + item + " + " + el);
 
-        let modifier = {};
-        modifier["edge"] = {};
-        modifier["edge"]["$inc"] = {};
-        modifier["edge"]["$inc"][item] = 1
+        let incMod = {$inc:{}};
+        let matchMod = {$inc:{}};
 
-        RecEngine.upsert(selector, modifier, false, function(err,res) {
-          if (err) { console.error(err); };
-        });
-      })
+        matchMod.$inc[item] = 1;
+        incMod.$inc[el] = 1;
 
+        RecEngine.upsert({node: el}, matchMod);
+        RecEngine.upsert({node: item}, incMod);
+      });
 
-      _.each(items, function(el, i) {
-        console.log(i + " " + el);
-        let selector = {};
-        selector["edge"] = {};
-        selector["edge"][el] = {};
-
-        let incrementer = {};
-        incrementer[item] = 1;
-
-        let modifier = {};
-        modifier["edge"] = {};
-        modifier["edge"][el] = { $inc: incrementer};
-
-        RecEngine.upsert(selector, modifier, false, function(err,res) {
-          if (err) { console.error(err); };
-        });
-      })
-
+      // _.each(items, function(el, i) {
+      //   console.log("Linking " + item + " + " + el);
+      //   let incMod = {$inc:{}};
+      //   let matchMod = {$inc:{}};
+      //
+      //   matchMod.$inc[item] = 1;
+      //   incMod.$inc[el] = 1;
+      //
+        // console.log("-------------------",{node: el}, matchMod);
+        // console.log("-------------------",{node: item}, incMod);
+      //
+      //   RecEngine.upsert({node: el}, matchMod, false, function(err, res) {
+      //     if (err) {console.error(err);};
+      //   });
+      //   RecEngine.upsert({node: item}, incMod, false, function(err,res) {
+      //     if (err) {console.error(err);};
+      //   });
+      // });
 
     };
-    addLink();
+    addLink(user, item);
   },
   suggest() {
     // Basically, this just calls max flow
@@ -144,7 +108,8 @@ Meteor.startup(function() {
     _.each(addresses, function(el, i) {
       user = _.sample(users)
       console.log("Running #" + i + " -- Linking " + user.username + " to " + el.address);
-      recEngine.link(user._id, el._id);
+      recEngine.link(user.username, el.address);
+      // recEngine.link(user._id, el._id); // For whatever reason, this does not work with IDs, but it works perfectly with strings... Huh...
     })
   }
 
