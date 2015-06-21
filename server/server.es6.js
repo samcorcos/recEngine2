@@ -43,21 +43,25 @@ recEngine = {
     };
     addLink(user, item);
   },
-  suggest() {
-    // Basically, this just calls max flow
-    fn = new FlowNetwork();
-    // fn.addEdge('s','o',3);
-    // fn.addEdge('s','p',3);
-    // fn.addEdge('o','p',2);
-    // fn.addEdge('o','q',3);
-    // fn.addEdge('p','r',2);
-    // fn.addEdge('r','t',3);
-    // fn.addEdge('q','r',4);
-    // fn.addEdge('q','t',2);
-    var max = fn.maxFlow('s','t'); // this should be called for every item in the database to get the "flow", which equates to the ranking of how closely associated it is (ie, how highly recommended)
-    console.log(max);
+  suggest(user, num=1, cb) {
+    let err = ""
+    let res = ['1']
 
-    return "suggestion time"
+    // TODO needs to run max flow for each item. That's a lot of items!
+    //
+    // fn = new FlowNetwork();
+    // // fn.addEdge('s','o',3);
+    // // fn.addEdge('s','p',3);
+    // // fn.addEdge('o','p',2);
+    // // fn.addEdge('o','q',3);
+    // // fn.addEdge('p','r',2);
+    // // fn.addEdge('r','t',3);
+    // // fn.addEdge('q','r',4);
+    // // fn.addEdge('q','t',2);
+    // var max = fn.maxFlow('s','t'); // this should be called for every item in the database to get the "flow", which equates to the ranking of how closely associated it is (ie, how highly recommended)
+    // console.log(max);
+
+    return cb(err,res);
   }
 }
 
@@ -108,5 +112,12 @@ Meteor.startup(function() {
 })
 
 Meteor.methods({
-
+  suggest: function(user, num) {
+    let temp = []
+    recEngine.suggest(user, num, function(err, res) {
+      if (err) {console.error(err);}
+      else { return temp = res; }
+    })
+    return temp
+  }
 })
