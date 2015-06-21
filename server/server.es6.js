@@ -22,6 +22,7 @@ recEngine = {
       /* We now have an array of the item IDs. */
       let items = R.pluck('item')(R.pluck('link')(userLinks));
 
+      /* For each item in the array of items above, link it with the item that is being passed through link(). */
       _.each(items, function(el, i) {
         console.log("Linking " + item + " + " + el);
 
@@ -31,29 +32,14 @@ recEngine = {
         matchMod.$inc[item] = 1;
         incMod.$inc[el] = 1;
 
-        RecEngine.upsert({node: el}, matchMod);
-        RecEngine.upsert({node: item}, incMod);
+        /* This has to run twice since we want the weight reflected on both nodes. */
+        RecEngine.upsert({node: el}, matchMod, false, function(err, res) {
+          if (err) { console.error(err);};
+        });
+        RecEngine.upsert({node: item}, incMod, false, function(err,res) {
+          if (err) { console.error(err);}
+        });
       });
-
-      // _.each(items, function(el, i) {
-      //   console.log("Linking " + item + " + " + el);
-      //   let incMod = {$inc:{}};
-      //   let matchMod = {$inc:{}};
-      //
-      //   matchMod.$inc[item] = 1;
-      //   incMod.$inc[el] = 1;
-      //
-        // console.log("-------------------",{node: el}, matchMod);
-        // console.log("-------------------",{node: item}, incMod);
-      //
-      //   RecEngine.upsert({node: el}, matchMod, false, function(err, res) {
-      //     if (err) {console.error(err);};
-      //   });
-      //   RecEngine.upsert({node: item}, incMod, false, function(err,res) {
-      //     if (err) {console.error(err);};
-      //   });
-      // });
-
     };
     addLink(user, item);
   },
@@ -81,7 +67,13 @@ Meteor.startup(function() {
     _.each(_.range(1000), function(el, i) {
       console.log("Adding address #" + i);
       let address = faker.address.country();
-      Addresses.insert({ address })
+      let test1 = new RegExp('\\.', 'ig');
+      let test2 = new RegExp('\\?', 'ig');
+
+      // TODO we can get rid of this test once we get IDs working...
+      if (!test1.test(address) && !test2.test(address)) { // Needs to check to make sure there are no "." or "$" in the word
+        Addresses.insert({ address })
+      } else { console.error("Word contained illegal character.");}
     })
   }
 
