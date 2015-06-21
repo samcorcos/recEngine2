@@ -58,6 +58,7 @@ FlowNetwork = function() {
 
   // Find the max flow in this network
   this.maxFlow = function(source, sink) {
+    // console.log(this.findPath(source,sink,[]));
     var path = this.findPath(source, sink, []);
     while(path != null) {
       var flow = 999999;

@@ -24,8 +24,6 @@ recEngine = {
 
       /* For each item in the array of items above, link it with the item that is being passed through link(). */
       _.each(items, function(el, i) {
-        console.log("Linking " + item + " + " + el);
-
         let incMod = {$inc:{}};
         let matchMod = {$inc:{}};
 
@@ -43,25 +41,63 @@ recEngine = {
     };
     addLink(user, item);
   },
-  suggest(user, num=1, cb) {
-    let err = ""
-    let res = ['1']
+  suggest(user, num=1) {
+    let result = []
 
     // TODO needs to run max flow for each item. That's a lot of items!
-    //
-    // fn = new FlowNetwork();
-    // // fn.addEdge('s','o',3);
-    // // fn.addEdge('s','p',3);
-    // // fn.addEdge('o','p',2);
-    // // fn.addEdge('o','q',3);
-    // // fn.addEdge('p','r',2);
-    // // fn.addEdge('r','t',3);
-    // // fn.addEdge('q','r',4);
-    // // fn.addEdge('q','t',2);
-    // var max = fn.maxFlow('s','t'); // this should be called for every item in the database to get the "flow", which equates to the ranking of how closely associated it is (ie, how highly recommended)
-    // console.log(max);
 
-    return cb(err,res);
+    /* This returns an array of all the things the user has liked. */
+    let userLinks = RecEngine.find({"link.user": user}).fetch();
+    /* We now have an array of the items. */
+    let items = R.pluck('item')(R.pluck('link')(userLinks));
+
+    let allNodes = RecEngine.find({node: {$exists: true}}).fetch();
+    let nodeKeys = R.pluck('node')(allNodes);
+    let fn = new FlowNetwork();
+
+    let addUserEdges = function (cb) {
+      /* We need to add a link of weight... 1? 99999? between the user and all the things he is linked to */
+      _.each(items, function(item) {
+        fn.addEdge( user, item, 999); // TODO this might have to be 99999 or 1... Not sure how this works yet
+      })
+      cb();
+    }
+    let addOtherEdges = function(cb) {
+      /* For each node (location) object, add the appropriate edges */
+      /* This builds the entire flow network */
+      _.each(allNodes, function(node) {
+        nodeWithoutIdOrSelf = R.omit(["_id","node"], node)
+        for (let prop in nodeWithoutIdOrSelf) {
+          fn.addEdge(node.node, prop, nodeWithoutIdOrSelf[prop]);
+        }
+      })
+      cb();
+    }
+    let getMaxFlow = function() {
+      // console.log(result.push(fn));
+      // console.log(JSON.stringify(fn, null, 2)); // TODO this gives me an error: "Converting circular structure to JSON". Makes me think there might be a problem with my fn
+      /* Once you've built the entire flow network... */
+      _.each(nodeKeys, function(nodeKey) {
+        // console.log("keys?");
+        // console.log(user, nodeKey);
+
+        //TODO THE ERROR IS HERE...
+        
+        let max = fn.maxFlow(user, nodeKey);
+        console.log("max   --   "+ max);
+        result.push({node:nodeKey, rating:max});
+      })
+    }
+
+    addUserEdges(function() {
+      addOtherEdges(function() {
+        getMaxFlow();
+      });
+    });
+
+
+
+    return result;
   }
 }
 
@@ -103,7 +139,7 @@ Meteor.startup(function() {
 
     _.each(addresses, function(el, i) {
       user = _.sample(users)
-      console.log("Running #" + i + " -- Linking " + user.username + " to " + el.address);
+      // console.log("Running #" + i + " -- Linking " + user.username + " to " + el.address);
       recEngine.link(user.username, el.address);
       // recEngine.link(user._id, el._id); // For whatever reason, this does not work with IDs, but it works perfectly with strings... Huh...
     })
@@ -113,11 +149,6 @@ Meteor.startup(function() {
 
 Meteor.methods({
   suggest: function(user, num) {
-    let temp = []
-    recEngine.suggest(user, num, function(err, res) {
-      if (err) {console.error(err);}
-      else { return temp = res; }
-    })
-    return temp
+    return recEngine.suggest(user, num)
   }
 })
